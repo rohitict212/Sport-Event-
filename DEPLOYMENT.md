@@ -42,7 +42,19 @@ The application should use environment variables for:
 - Run health checks after deployment.
 - Validate login, organization creation, and public tournament pages.
 - Check database connectivity and migration status.
+- Validate the scoring flow after a deployment update.
 - Keep rollback instructions documented.
+
+## Public preview gate
+
+Before any public launch, confirm:
+
+- the landing page communicates the product clearly
+- the dashboard is only accessible to authenticated organizers
+- no private organization data is exposed on public pages
+- tournament standings and match results are accurate and readable
+- the scoring workflow works without exposing sensitive internal data
+- production credentials are isolated from local and staging settings
 
 ## Backup and recovery
 

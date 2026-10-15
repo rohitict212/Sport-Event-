@@ -1,61 +1,86 @@
 # SportEvent
 
-SportEvent is a small SaaS for managing local cricket tournaments. It helps organizers create tournaments, add teams and players, schedule matches, record live scoring, calculate points, and share public results.
+SportEvent is a tournament management SaaS for local cricket organizers. The app supports organization setup, tournament management, team and player records, match scheduling, innings scoring, result tracking, and public tournament standings and results pages.
 
-This repository is currently in the project-preparation phase. The goal for this stage is to define the product, architecture, database model, security rules, and implementation roadmap without building the full application foundation.
+## Current product status
 
-## What SportEvent will do
+This is a working MVP ready for a staging or closed-release preview. It is not yet publicly deployed.
 
-- Let an organizer create an account and organization.
-- Create tournaments with teams and players.
-- Schedule matches and record live cricket scoring.
-- Update standings and publicly share results.
-- Protect private data so each organization can only see its own records.
+### Included features
 
-## Recommended stack
+- Organizer authentication and session management
+- Organization creation and member-scoped access
+- Tournament management
+- Team and player management
+- Match scheduling and status tracking
+- Innings creation and score-event recording
+- Final match result calculation
+- Public tournament standings and results page
+- Protected dashboard routes with organization-level access checks
 
-- Frontend: Next.js, React, TypeScript
-- Styling: Tailwind CSS
-- Backend: Next.js API routes and server logic
-- Database: PostgreSQL
-- ORM: Prisma
-- Authentication: NextAuth.js or a maintained auth provider
-- Validation: Zod
-- Testing: Vitest + Playwright
-- CI: GitHub Actions
-- Hosting: Vercel or a similar managed platform
+## Stack
 
-## Repository structure
+- Next.js App Router and React
+- TypeScript and ESLint
+- Tailwind CSS
+- Prisma with PostgreSQL
+- Zod validation and Vitest
 
-- `README.md` — project overview
-- `PRODUCT.md` — product scope, roles, and MVP decisions
-- `ARCHITECTURE.md` — technical architecture and folder structure
-- `DATABASE.md` — data model and relationships
-- `SECURITY.md` — security and tenant-isolation plan
-- `ROADMAP.md` — phased delivery plan
-- `CONTRIBUTING.md` — contribution and quality workflow
-- `DEPLOYMENT.md` — hosting and environment plan
-- `TESTING.md` — testing strategy and critical journey
-- `.github/copilot-instructions.md` — repo-specific AI guidance
-- `.github/workflows/ci.yml` — CI template for lint, tests, and build
-
-## Quick status
-
-- Git repository: initialized on the local workspace.
-- Full application build: not started yet.
-- Remote GitHub push: not done.
-- Paid infrastructure: not created.
-
-## Important note
-
-This repository is intentionally prepared for architecture and documentation, not a production-ready app. The next step is to confirm the architecture and then implement the application foundation only after approval.
-
-## Day-1 setup after approval
+## Getting started
 
 ```bash
-git checkout -b main
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
-Later, when the app foundation exists, use the project-specific scripts in the package manifest to run linting, type checking, tests, and production builds.
+The app can be viewed at http://localhost:3000.
+
+## Quality checks
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npm run ci:check
+```
+
+## Key app routes
+
+- `/` — landing page
+- `/signup` — account creation
+- `/login` — sign in
+- `/dashboard` — organizations overview
+- `/dashboard/tournaments` — tournament list and standings link
+- `/dashboard/teams` — team management
+- `/dashboard/players` — player management
+- `/dashboard/matches` — match scheduling
+- `/dashboard/scoring` — live innings and delivery scoring
+- `/tournaments/[id]` — public tournament standings and results page
+
+## Production readiness before public launch
+
+Before making the product public, confirm:
+
+- production environment variables are set separately from local values
+- DATABASE_URL points to a managed PostgreSQL instance
+- NEXTAUTH_SECRET and app URL are production-safe
+- CI passes in GitHub Actions
+- admin and organizer access rules are tested
+- backups and rollback steps are documented
+- the public tournament page is reviewed for privacy and correctness
+- the Vercel project is configured with the same variables as the production environment
+
+Environment values are placeholders in `.env.example`. Do not commit local credentials or secrets.
+
+## Vercel deployment notes
+
+This repository includes a Vercel config at `vercel.json`. For a production deploy, configure the following environment variables in Vercel:
+
+- `DATABASE_URL`
+- `NEXTAUTH_SECRET`
+- `NEXTAUTH_URL`
+- `NEXT_PUBLIC_APP_URL`
+
+Use a production PostgreSQL connection string and a strong random value for `NEXTAUTH_SECRET`.

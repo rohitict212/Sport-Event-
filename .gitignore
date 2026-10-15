@@ -8,11 +8,13 @@ out/
 .env
 .env.local
 .env.*.local
+.sportevent-demo-users.json
 
 # Build outputs
 coverage/
 *.log
 npm-debug.log*
+*.tsbuildinfo
 
 dist/
 build/
