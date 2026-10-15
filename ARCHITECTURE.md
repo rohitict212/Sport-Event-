@@ -40,7 +40,7 @@ SportEvent will use a simple web application architecture based on Next.js. The 
 ├── app/
 │   ├── (auth)/
 │   ├── (dashboard)/
-│   ├── (public)/n
+│   ├── (public)/
 │   ├── api/
 │   ├── globals.css
 │   └── layout.tsx
