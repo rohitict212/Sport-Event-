@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+.next/
+out/
+.pnpm-store/
+
+# Local environment
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+coverage/
+*.log
+npm-debug.log*
+
+dist/
+build/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Test artifacts
+playwright-report/
+playwright/.cache/
+
+# Temporary files
+*.tmp
+*.swp
