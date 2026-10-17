@@ -1,0 +1,139 @@
+.demo-page {
+  background:
+    radial-gradient(ellipse at 12% 0%, rgb(8 145 178 / 13%), transparent 32rem),
+    radial-gradient(ellipse at 92% 18%, rgb(168 85 247 / 10%), transparent 30rem),
+    #070d18;
+  color: #e2e8f0;
+  color-scheme: dark;
+}
+
+.demo-header {
+  border-color: rgb(148 163 184 / 16%) !important;
+  background: rgb(7 13 24 / 88%) !important;
+  backdrop-filter: blur(14px);
+}
+
+.demo-hero {
+  background:
+    radial-gradient(ellipse at 77% 10%, rgb(34 211 238 / 20%), transparent 22rem),
+    linear-gradient(112deg, #10253a 0%, #12233d 48%, #241642 100%);
+}
+
+.night-demo .bg-white {
+  background-color: #101d30 !important;
+}
+
+.night-demo .bg-slate-50 {
+  background-color: #0d1728 !important;
+}
+
+.night-demo .bg-slate-100 {
+  background-color: #17263b !important;
+}
+
+.night-demo .text-slate-900 {
+  color: #f8fafc !important;
+}
+
+.night-demo .text-slate-800 {
+  color: #e2e8f0 !important;
+}
+
+.night-demo .text-slate-700 {
+  color: #cbd5e1 !important;
+}
+
+.night-demo .text-slate-600 {
+  color: #bdc9da !important;
+}
+
+.night-demo .text-slate-500 {
+  color: #9babc0 !important;
+}
+
+.night-demo .border-slate-200,
+.night-demo .border-slate-300 {
+  border-color: #29394f !important;
+}
+
+.night-demo .border-slate-100 {
+  border-color: #1d2b40 !important;
+}
+
+.night-demo .border-dashed {
+  border-color: #42516a !important;
+}
+
+.night-demo input:not([type="checkbox"]),
+.night-demo textarea,
+.night-demo select,
+.demo-input {
+  border-color: #40516a !important;
+  background-color: #0b1423 !important;
+  color: #f1f5f9 !important;
+  color-scheme: dark;
+}
+
+.night-demo input::placeholder,
+.night-demo textarea::placeholder {
+  color: #8292a8;
+}
+
+.night-demo option {
+  background-color: #101d30;
+  color: #f1f5f9;
+}
+
+.night-demo .hover\:bg-slate-100:hover,
+.night-demo .hover\:bg-slate-100:focus-visible {
+  background-color: #1b2b41 !important;
+}
+
+.night-demo .hover\:bg-white:hover,
+.night-demo .hover\:bg-white:focus-visible {
+  background-color: #18283d !important;
+}
+
+.night-demo .text-emerald-700 {
+  color: #5eead4 !important;
+}
+
+.night-demo .hover\:text-emerald-800:hover {
+  color: #a7f3d0 !important;
+}
+
+.night-demo .bg-slate-900 {
+  background-color: #0d192b !important;
+}
+
+.night-demo table tbody tr:hover {
+  background: rgb(148 163 184 / 5%);
+}
+
+.demo-panel,
+.stat-card {
+  box-shadow: 0 18px 50px rgb(0 0 0 / 18%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .demo-hero {
+    animation: demo-arrive 550ms ease-out both;
+  }
+
+  .demo-panel,
+  .stat-card {
+    animation: demo-arrive 450ms ease-out both;
+  }
+}
+
+@keyframes demo-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

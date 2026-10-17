@@ -29,7 +29,7 @@ export default function HomePage() {
                 Try the interactive demo
               </Link>
               <p className="self-center text-sm leading-6 text-slate-600">
-                Explore with sample data. Changes stay in this browser.
+                Explore tournament tools with fictional data. Changes stay in this browser.
               </p>
             </>
           ) : (

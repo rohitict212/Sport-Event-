@@ -103,13 +103,15 @@ Set production secrets only in the hosting provider. Do not deploy until real pr
 
 ## Non-commercial interactive demo
 
-To deploy a read-only, non-commercial preview on the Vercel Hobby plan, set
+To deploy a non-commercial, browser-only preview on the Vercel Hobby plan, set
 `NEXT_PUBLIC_DEMO_MODE=static` for the Production environment. This mode keeps the
 landing page and an interactive sample workspace at `/demo`. The workspace uses
-fictional teams, players, matches, scoring, and standings stored only in the
-visitor's browser. Login, SMS, real organizer dashboards, tournament pages, and
-all API routes remain disabled. It does not require database or Twilio credentials
-and must not be used to serve commercial customers or handle real personal or
-tournament data. Remove the variable only when the production database, Twilio
-Verify, HTTPS origin, and an appropriate hosting plan are ready and the full app
-has been revalidated.
+fictional tournaments, each with its own teams, players, matches, batting and
+bowling scorecards, statistics, and standings stored only in the visitor's browser.
+It supports creating and editing tournaments and sample data, and displays charts,
+run rates, batting averages, strike rates, and bowling economy. Login, SMS, real organizer dashboards, tournament
+pages, and all API routes remain disabled. It does not require database or Twilio
+credentials and must not be used to serve commercial customers or handle real
+personal or tournament data. Remove the variable only when the production database,
+Twilio Verify, HTTPS origin, and an appropriate hosting plan are ready and the full
+app has been revalidated.
