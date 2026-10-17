@@ -100,3 +100,13 @@ This repository includes a Vercel config at `vercel.json`. For a production depl
 - `TWILIO_VERIFY_SERVICE_SID`
 
 Set production secrets only in the hosting provider. Do not deploy until real provider credentials and the production database are configured and verified.
+
+## Non-commercial static demo
+
+To deploy a read-only, non-commercial preview on the Vercel Hobby plan, set
+`NEXT_PUBLIC_DEMO_MODE=static` for the Production environment. This mode keeps the
+landing page available but disables login, SMS, organizer dashboards, tournament
+pages, and all API routes. It does not require database or Twilio credentials and
+must not be used to serve commercial customers. Remove the variable only when the
+production database, Twilio Verify, HTTPS origin, and an appropriate hosting plan
+are ready and the full app has been revalidated.

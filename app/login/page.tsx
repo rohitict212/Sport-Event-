@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
+  const isStaticDemo = process.env.NEXT_PUBLIC_DEMO_MODE === "static";
   const [phoneNumber, setPhoneNumber] = useState("");
   const [code, setCode] = useState("");
   const [isCodeSent, setIsCodeSent] = useState(false);
@@ -54,6 +55,11 @@ export default function LoginPage() {
           We’ll send a one-time verification code by SMS. Use your full international number, including the + country code.
         </p>
 
+        {isStaticDemo ? (
+          <p className="mt-7 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+            Sign-in is disabled in this non-commercial static demo. No SMS messages are sent.
+          </p>
+        ) : (
         <form className="mt-7 space-y-4" onSubmit={submit}>
           <label className="block text-sm font-medium text-slate-700" htmlFor="phone-number">
             Mobile number
@@ -116,6 +122,7 @@ export default function LoginPage() {
             </button>
           ) : null}
         </form>
+        )}
       </section>
     </main>
   );
