@@ -1,160 +1,122 @@
 "use client";
 
-import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useState } from "react";
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  return (
-    <Suspense fallback={<main className="min-h-screen" />}>
-      <LoginForm />
-    </Suspense>
-  );
-}
-
-function LoginForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [mobileNumber, setMobileNumber] = useState(searchParams.get("mobile") ?? "");
-  const [otp, setOtp] = useState(searchParams.get("otp") ?? "");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [code, setCode] = useState("");
+  const [isCodeSent, setIsCodeSent] = useState(false);
   const [error, setError] = useState("");
-  const [otpStatus, setOtpStatus] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  async function handleSendOtp() {
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setError("");
-    setOtpStatus("");
-
-    if (!mobileNumber.trim()) {
-      setError("Enter your mobile number to receive the OTP.");
-      return;
-    }
-
-    setIsSendingOtp(true);
+    setBusy(true);
 
     try {
-      const response = await fetch("/api/auth/send-otp", {
+      const response = await fetch(isCodeSent ? "/api/auth/otp/verify" : "/api/auth/otp/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mobileNumber }),
+        body: JSON.stringify(isCodeSent ? { phoneNumber, code } : { phoneNumber }),
       });
-
-      const payload = (await response.json()) as { error?: string; otp?: string };
+      const payload = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        setError(payload.error ?? "Unable to send OTP.");
+        setError(payload.error ?? "Unable to verify your mobile number.");
         return;
       }
 
-      setOtpStatus(
-        payload.otp
-          ? `OTP sent. Demo code: ${payload.otp}`
-          : "OTP has been sent to your mobile number. Please check it and continue.",
-      );
+      if (isCodeSent) {
+        router.replace("/dashboard");
+        router.refresh();
+      } else {
+        setIsCodeSent(true);
+      }
     } catch {
-      setError("The OTP service is temporarily unavailable. Please try again.");
+      setError("Unable to reach the server. Please try again.");
     } finally {
-      setIsSendingOtp(false);
+      setBusy(false);
     }
-  }
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-    setIsSubmitting(true);
-
-    const result = await signIn("credentials", {
-      redirect: false,
-      mobileNumber,
-      otp,
-    });
-
-    setIsSubmitting(false);
-
-    if (result?.error) {
-      const message = result.error.toLowerCase();
-      setError(
-        message.includes("database") || message.includes("prisma") || message.includes("db")
-          ? "The login service is temporarily unavailable. Please try again in a moment."
-          : "Incorrect mobile number or OTP. Please try again.",
-      );
-      return;
-    }
-
-    router.push("/dashboard");
-    router.refresh();
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md items-center justify-center px-6 py-12">
-      <div className="w-full rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-700">SportEvent</p>
-        <h1 className="mt-3 text-3xl font-bold text-slate-900">Welcome back</h1>
-        <p className="mt-2 text-sm text-slate-500">Sign in with your mobile number and OTP.</p>
+    <main className="mx-auto flex min-h-screen max-w-xl items-center px-6 py-12">
+      <section className="w-full rounded-3xl border border-slate-200 bg-white p-8 shadow-sm sm:p-10">
+        <Link href="/" className="text-sm font-semibold text-emerald-700 hover:text-emerald-800">
+          SportEvent
+        </Link>
+        <h1 className="mt-5 text-3xl font-bold text-slate-900">Sign in with your mobile</h1>
+        <p className="mt-3 text-sm leading-6 text-slate-600">
+          We’ll send a one-time verification code by SMS. Use your full international number, including the + country code.
+        </p>
 
-        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="mobileNumber">
-              Mobile number
-            </label>
+        <form className="mt-7 space-y-4" onSubmit={submit}>
+          <label className="block text-sm font-medium text-slate-700" htmlFor="phone-number">
+            Mobile number
             <input
-              id="mobileNumber"
+              id="phone-number"
               type="tel"
-              value={mobileNumber}
-              onChange={(event) => setMobileNumber(event.target.value)}
-              className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-              placeholder="+91 98765 43210"
+              autoComplete="tel"
+              inputMode="tel"
               required
+              pattern="^\+[1-9][0-9]{7,14}$"
+              title="Use international E.164 format, for example +14155552671."
+              disabled={isCodeSent}
+              value={phoneNumber}
+              onChange={(event) => setPhoneNumber(event.target.value)}
+              placeholder="+14155552671"
+              className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
             />
-          </div>
+          </label>
 
-          <button
-            type="button"
-            disabled={isSendingOtp}
-            onClick={handleSendOtp}
-            className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isSendingOtp ? "Sending OTP..." : "Send OTP"}
-          </button>
-
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="otp">
-              OTP
+          {isCodeSent ? (
+            <label className="block text-sm font-medium text-slate-700" htmlFor="otp-code">
+              6-digit verification code
+              <input
+                id="otp-code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                required
+                pattern="[0-9]{6}"
+                minLength={6}
+                maxLength={6}
+                value={code}
+                onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 tracking-[0.4em] outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+              />
             </label>
-            <input
-              id="otp"
-              type="text"
-              inputMode="numeric"
-              value={otp}
-              onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))}
-              className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-              placeholder="123456"
-              maxLength={6}
-              required
-            />
-          </div>
+          ) : null}
 
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
-          {otpStatus ? <p className="text-sm text-emerald-700">{otpStatus}</p> : null}
+          {error ? <p role="alert" className="text-sm text-red-600">{error}</p> : null}
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={busy}
             className="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting ? "Signing in..." : "Sign in"}
+            {busy ? "Please wait..." : isCodeSent ? "Verify and sign in" : "Send verification code"}
           </button>
-        </form>
 
-        <p className="mt-5 text-center text-sm text-slate-600">
-          New here?{" "}
-          <Link href="/signup" className="font-semibold text-emerald-700 hover:text-emerald-600">
-            Create an account
-          </Link>
-        </p>
-      </div>
+          {isCodeSent ? (
+            <button
+              type="button"
+              onClick={() => {
+                setIsCodeSent(false);
+                setCode("");
+                setError("");
+              }}
+              className="w-full text-sm font-medium text-slate-600 hover:text-slate-900"
+            >
+              Change mobile number
+            </button>
+          ) : null}
+        </form>
+      </section>
     </main>
   );
 }

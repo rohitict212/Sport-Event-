@@ -25,22 +25,22 @@ This approach reduces operational work while still being production-ready for a 
 The application should use environment variables for:
 
 - database connection string
-- auth secret
 - app URL
-- provider credentials
+- Twilio Account SID, Auth Token, and Verify Service SID
 - deployment environment value
 
 ## Database deployment
 
 - Use a managed PostgreSQL service.
 - Use migrations to keep schema changes consistent.
+- Apply migrations with `npx prisma migrate deploy`; never use `prisma db push` against production.
 - Create backups based on the provider schedule.
 - Keep production database credentials separate from development credentials.
 
 ## Health checks and release flow
 
 - Run health checks after deployment.
-- Validate login, organization creation, and public tournament pages.
+- Validate organization creation and public tournament pages.
 - Check database connectivity and migration status.
 - Validate the scoring flow after a deployment update.
 - Keep rollback instructions documented.
@@ -50,8 +50,10 @@ The application should use environment variables for:
 Before any public launch, confirm:
 
 - the landing page communicates the product clearly
-- the dashboard is only accessible to authenticated organizers
-- no private organization data is exposed on public pages
+- a working access-control model protects management routes and data
+- Twilio Verify SMS sign-in works with production six-digit code configuration
+- private organization data is not exposed to public visitors
+- unpublished tournament pages are inaccessible
 - tournament standings and match results are accurate and readable
 - the scoring workflow works without exposing sensitive internal data
 - production credentials are isolated from local and staging settings
@@ -66,7 +68,7 @@ Before any public launch, confirm:
 
 Before production deployment, confirm:
 
-- authentication works correctly
+- authentication and authorization are implemented and tested
 - tenant isolation is enforced
 - secrets are not exposed
 - CI and tests pass
@@ -79,3 +81,4 @@ Before production deployment, confirm:
 - Do not deploy to production without explicit approval.
 - Do not create paid infrastructure until the product is approved and the required budget is confirmed.
 - Do not automatically run destructive migrations in production.
+- Do not deploy until managed production PostgreSQL, an HTTPS origin, Twilio Verify credentials, SMS spend limits, backups, and rollback steps are configured and verified.

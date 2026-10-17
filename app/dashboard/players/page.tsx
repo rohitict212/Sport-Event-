@@ -1,14 +1,10 @@
-import { redirect } from "next/navigation";
-
 import PlayerManagementClient from "@/app/dashboard/players/player-client";
-import { getCurrentUser } from "@/lib/auth/session";
 import { getOrganizerOrganizations } from "@/lib/organizations";
 import { prisma } from "@/lib/prisma";
+import { requireCurrentUser } from "@/lib/auth/session";
 
 export default async function PlayersPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-
+  const user = await requireCurrentUser();
   const organizations = await getOrganizerOrganizations(user.id);
   const organizationIds = organizations.map(({ id }) => id);
 

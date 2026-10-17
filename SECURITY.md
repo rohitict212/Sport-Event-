@@ -1,4 +1,4 @@
-# Security plan
+# Security notes
 
 ## Core principles
 
@@ -6,16 +6,20 @@ Security for SportEvent must be built from the beginning. A SaaS with tenant dat
 
 ## Authentication and session handling
 
-- Use a maintained authentication library such as NextAuth.js.
-- Store only session-safe values in the browser.
-- Keep secrets in environment variables, never in frontend code.
-- Use secure password hashing and session tokens managed by the auth library.
-- Use HTTPS in production.
+- Sign-in uses Twilio Verify SMS OTP with E.164 phone numbers and six-digit codes.
+- The browser receives an HTTP-only, SameSite=Lax session cookie; only a SHA-256 hash of the random session token is stored in the database.
+- OTP codes are checked by Twilio and are never persisted by this app.
+- OTP endpoints enforce persistent per-phone and per-client-address rate limits.
+- State-changing endpoints require same-origin requests.
+- Session cookies are Secure in production; production must use HTTPS.
+- There is no development OTP bypass. Missing provider configuration fails closed.
 
 ## Authorization and multi-tenancy
 
 - Every private request must be validated by the server.
 - Every database query for organization-scoped data must filter by `organization_id`.
+- Dashboard pages and management APIs require a session and organization membership.
+- Tournament pages are private by default and require an organization member to publish them.
 - Frontend-only hiding of buttons is not enough.
 - URL parameters like `organizationId`, `tournamentId`, or `matchId` must not be trusted.
 - Test unauthorized requests by changing IDs in API calls.
@@ -30,8 +34,8 @@ Security for SportEvent must be built from the beginning. A SaaS with tenant dat
 ## Common web protections
 
 - Validate and sanitize all input.
-- Apply rate limiting to high-risk endpoints.
-- Use secure HTTP headers.
+- Apply persistent rate limits to OTP endpoints.
+- Set frame, MIME-sniffing, referrer, permissions, and production HSTS headers.
 - Protect against CSRF for state-changing requests that need it.
 - Return minimal but useful error messages.
 
@@ -61,6 +65,7 @@ Security for SportEvent must be built from the beginning. A SaaS with tenant dat
 - Overly broad database access
 - Weak environment-variable handling
 - Insufficient audit logging
+- SMS provider misconfiguration or unbounded spend
 
 ## Security validation steps
 
@@ -69,4 +74,4 @@ Security for SportEvent must be built from the beginning. A SaaS with tenant dat
 - Test invalid inputs such as negative overs or impossible score totals.
 - Review logs after changes.
 
-This is a planning document. The actual implementation must be verified with tests, not assumed to be secure because it looks correct.
+Production launch is blocked until real Twilio Verify credentials, managed production PostgreSQL, an HTTPS app origin, backups, and hosting access are configured. Never put secrets in this repository or in chat.

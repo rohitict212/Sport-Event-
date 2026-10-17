@@ -1,24 +1,12 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
-import { getCurrentUser } from "@/lib/auth/session";
+import { requireCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 export default async function DashboardPage() {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
+  const user = await requireCurrentUser();
   const organizations = await prisma.organization.findMany({
-    where: {
-      members: {
-        some: {
-          userId: user.id,
-        },
-      },
-    },
+    where: { members: { some: { userId: user.id } } },
     orderBy: {
       createdAt: "desc",
     },
@@ -42,7 +30,7 @@ export default async function DashboardPage() {
       <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {organizations.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-slate-600 md:col-span-2 xl:col-span-3">
-            You have not created any organizations yet.
+            No organizations yet. Create one to start managing tournaments.
           </div>
         ) : (
           organizations.map((organization) => (

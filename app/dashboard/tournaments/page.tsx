@@ -1,15 +1,13 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
-import { getCurrentUser } from "@/lib/auth/session";
 import { getOrganizerOrganizations } from "@/lib/organizations";
 import { prisma } from "@/lib/prisma";
 import ManagementClient from "@/app/dashboard/management-client";
+import { requireCurrentUser } from "@/lib/auth/session";
+import TournamentVisibilityButton from "@/app/dashboard/tournaments/visibility-button";
 
 export default async function TournamentsPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-
+  const user = await requireCurrentUser();
   const organizations = await getOrganizerOrganizations(user.id);
   const tournaments = await prisma.tournament.findMany({
     where: { organizationId: { in: organizations.map(({ id }) => id) } },
@@ -45,14 +43,19 @@ export default async function TournamentsPage() {
                   {tournament.organization.name}
                 </p>
                 <h2 className="mt-1 text-xl font-bold text-slate-900">{tournament.name}</h2>
+                <div className="mt-2">
+                  <TournamentVisibilityButton tournamentId={tournament.id} isPublic={tournament.isPublic} />
+                </div>
                 {tournament.description ? (
                   <p className="mt-2 text-sm text-slate-600">{tournament.description}</p>
                 ) : null}
                 <div className="mt-4 flex items-center justify-between gap-3">
                   <p className="text-sm text-slate-500">{tournament._count.teams} teams</p>
-                  <Link href={`/tournaments/${tournament.id}`} className="text-sm font-semibold text-emerald-700 hover:text-emerald-800" target="_blank" rel="noreferrer">
-                    View standings →
-                  </Link>
+                  {tournament.isPublic ? (
+                    <Link href={`/tournaments/${tournament.id}`} className="text-sm font-semibold text-emerald-700 hover:text-emerald-800" target="_blank" rel="noreferrer">
+                      View standings →
+                    </Link>
+                  ) : null}
                 </div>
               </article>
             ))

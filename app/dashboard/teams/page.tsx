@@ -1,15 +1,12 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
 import ManagementClient from "@/app/dashboard/management-client";
-import { getCurrentUser } from "@/lib/auth/session";
 import { getOrganizerOrganizations } from "@/lib/organizations";
 import { prisma } from "@/lib/prisma";
+import { requireCurrentUser } from "@/lib/auth/session";
 
 export default async function TeamsPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-
+  const user = await requireCurrentUser();
   const organizations = await getOrganizerOrganizations(user.id);
   const organizationIds = organizations.map(({ id }) => id);
   const [tournaments, teams] = await Promise.all([

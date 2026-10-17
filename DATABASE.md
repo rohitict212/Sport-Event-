@@ -183,5 +183,6 @@ This can be persisted if the pool is simple and easy to recalculate, but it shou
 - Use PostgreSQL in a managed environment.
 - Use Prisma migrations for schema evolution.
 - Keep migration history in version control.
+- Apply committed migrations with `npx prisma migrate deploy` in production; do not use `prisma db push` against production databases.
 - Use development and production databases separately.
 - Never use local development credentials as production credentials.

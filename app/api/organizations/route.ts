@@ -1,8 +1,9 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { authOptions } from "@/lib/auth";
+import { getOrganizerOrganizations } from "@/lib/organizations";
+import { getCurrentUser } from "@/lib/auth/session";
+import { isSameOriginRequest } from "@/lib/auth/request";
 import { prisma } from "@/lib/prisma";
 
 const createOrganizationSchema = z.object({
@@ -10,39 +11,24 @@ const createOrganizationSchema = z.object({
 });
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
 
-  const organizations = await prisma.organization.findMany({
-    where: {
-      members: {
-        some: {
-          userId: session.user.id,
-        },
-      },
-    },
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      createdAt: true,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  const organizations = await getOrganizerOrganizations(user.id);
 
   return NextResponse.json({ organizations });
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
+  if (!isSameOriginRequest(request)) {
+    return NextResponse.json({ error: "Request origin is not allowed." }, { status: 403 });
+  }
 
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
 
   try {
@@ -68,17 +54,13 @@ export async function POST(request: Request) {
     });
 
     const slug = existingOrganization ? `${slugBase}-${Date.now()}` : slugBase;
-
     const organization = await prisma.organization.create({
       data: {
         name: parsed.data.name,
         slug,
-        ownerUserId: session.user.id,
+        ownerUserId: user.id,
         members: {
-          create: {
-            userId: session.user.id,
-            role: "OWNER",
-          },
+          create: { userId: user.id, role: "owner" },
         },
       },
     });

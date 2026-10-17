@@ -8,14 +8,14 @@ The software is designed for people who are not technical experts. The interface
 
 ## MVP goals
 
-- Organizer registration and login
+- No-account shared workspace
 - Organization creation
 - Tournament management
 - Team and player management
 - Match schedule and live scoring
 - Result entry and tournament points
 - Public website for fixtures and results
-- Protected data so one organization cannot see another organization's private data
+- Shared access to all organizations and tournament data
 
 ## Features excluded from version 1
 
@@ -28,65 +28,19 @@ The software is designed for people who are not technical experts. The interface
 - Microservices or Kafka
 - Extra infrastructure beyond a clear need
 
-## User roles
+## Access model
 
-### Platform admin
-
-- Oversees the platform globally
-- Reviews tenant health
-- Can help with support or emergency cleanup
-- Should not be confused with an organization organizer
-
-### Organization owner / organizer
-
-- Creates and manages one or more organizations
-- Creates tournaments
-- Adds teams, players, and venues
-- Schedules matches
-- Records scoring events
-- Publishes results
-- Can only access authorized organization data
-
-### Scorer
-
-- Limited to match-scoring actions
-- May record live ball-by-ball updates for assigned matches
-- Cannot edit organization settings or user permissions
-
-### Public visitor
-
-- Reads public tournament information
-- Views fixtures, standings, and results
-- Cannot manage private organization data
-
-## Permission model
-
-Permissions should be explicit and checked on the server. The frontend may hide actions, but the backend is the real authority.
-
-Examples:
-
-- `organization:read` — view organization data
-- `organization:update` — edit organization settings
-- `tournament:create` — create a tournament within an organization
-- `tournament:update` — edit an existing tournament
-- `team:manage` — add or delete teams
-- `player:manage` — add or delete players
-- `match:manage` — create or update matches
-- `score:write` — record scoring events
-- `audit:read` — view audit logs
+There are no end-user accounts, sign-in, roles, or permission checks. Every visitor shares the same workspace and can manage all tournament data. This is suitable only for a private local preview and must not be exposed publicly with real data.
 
 ## MVP user journey
 
-1. Organizer signs up.
-2. Organizer creates an organization.
-3. Organizer creates a tournament.
-4. Organizer adds two teams.
-5. Organizer adds player records.
-6. Organizer creates a match between the teams.
-7. Scorer updates deliveries in real time.
-8. The system calculates the result.
-9. The points table updates.
-10. A public visitor opens the tournament link and reads results.
+1. Visitor opens the shared dashboard.
+2. Visitor creates an organization and tournament.
+3. Visitor adds teams and player records.
+4. Visitor creates a match between the teams.
+5. Visitor updates deliveries in real time.
+6. The system calculates the result and points table.
+7. Anyone with the public tournament link can read results.
 
 ## Non-goals for this phase
 

@@ -9,12 +9,10 @@ datasource db {
 
 model User {
   id            String               @id @default(uuid()) @db.Uuid
-  email         String               @unique
-  mobileNumber  String?              @unique @map("mobile_number")
+  email         String?              @unique
+  mobileNumber  String               @unique @map("mobile_number")
   name          String?
-  passwordHash  String               @map("password_hash")
-  otpCode       String?              @map("otp_code")
-  otpExpiresAt  DateTime?            @map("otp_expires_at")
+  passwordHash  String?              @map("password_hash")
   createdAt     DateTime             @default(now()) @map("created_at")
   updatedAt     DateTime             @updatedAt @map("updated_at")
   accounts      Account[]
@@ -53,7 +51,18 @@ model Session {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([expires])
   @@map("sessions")
+}
+
+model AuthRateLimit {
+  key             String   @id @db.VarChar(64)
+  count           Int      @default(0)
+  windowStartedAt DateTime @default(now()) @map("window_started_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([windowStartedAt])
+  @@map("auth_rate_limits")
 }
 
 model VerificationToken {
@@ -102,6 +111,7 @@ model Tournament {
   organizationId String   @map("organization_id") @db.Uuid
   name           String
   description    String?
+  isPublic       Boolean  @default(false) @map("is_public")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 

@@ -1,9 +1,9 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { authOptions } from "@/lib/auth";
 import { getOrganizerOrganizations } from "@/lib/organizations";
+import { getCurrentUser } from "@/lib/auth/session";
+import { isSameOriginRequest } from "@/lib/auth/request";
 import { prisma } from "@/lib/prisma";
 
 const teamSchema = z.object({
@@ -12,13 +12,11 @@ const teamSchema = z.object({
 });
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
-
-  const organizations = await getOrganizerOrganizations(session.user.id);
+  const organizations = await getOrganizerOrganizations(user.id);
   const teams = await prisma.team.findMany({
     where: { organizationId: { in: organizations.map(({ id }) => id) } },
     select: {
@@ -36,10 +34,13 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
+  if (!isSameOriginRequest(request)) {
+    return NextResponse.json({ error: "Request origin is not allowed." }, { status: 403 });
+  }
 
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
 
   let body: unknown;
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const organizations = await getOrganizerOrganizations(session.user.id);
+  const organizations = await getOrganizerOrganizations(user.id);
   const tournament = await prisma.tournament.findFirst({
     where: {
       id: parsed.data.tournamentId,

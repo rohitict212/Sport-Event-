@@ -1,16 +1,6 @@
 import Link from "next/link";
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
 
-import { authOptions } from "@/lib/auth";
-
-export default async function HomePage() {
-  const session = await getServerSession(authOptions);
-
-  if (session?.user) {
-    redirect("/dashboard");
-  }
-
+export default function HomePage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-5xl flex-col justify-center px-6 py-16">
       <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm sm:p-12">
@@ -24,16 +14,10 @@ export default async function HomePage() {
 
         <div className="mt-8 flex flex-wrap gap-4">
           <Link
-            href="/signup"
+            href="/login"
             className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500"
           >
-            Create an account
-          </Link>
-          <Link
-            href="/login"
-            className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
-          >
-            Sign in
+            Sign in to manage tournaments
           </Link>
         </div>
       </div>

@@ -1,17 +1,15 @@
-import { getCurrentUser } from "@/lib/auth/session";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { requireCurrentUser } from "@/lib/auth/session";
+import LogoutButton from "@/app/dashboard/logout-button";
+
+export const dynamic = "force-dynamic";
 
 export default async function DashboardLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  const user = await requireCurrentUser();
 
   return (
     <>
@@ -25,6 +23,10 @@ export default async function DashboardLayout({
             <Link href="/dashboard/players">Players</Link>
             <Link href="/dashboard/matches">Matches</Link>
             <Link href="/dashboard/scoring">Scoring</Link>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="hidden text-sm text-slate-500 sm:block">{user.mobileNumber}</span>
+            <LogoutButton />
           </div>
         </nav>
       </header>

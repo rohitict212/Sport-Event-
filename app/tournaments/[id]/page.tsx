@@ -4,11 +4,13 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { calculateTournamentStandings } from "@/lib/tournament-standings";
 
+export const dynamic = "force-dynamic";
+
 export default async function TournamentPublicPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const tournament = await prisma.tournament.findUnique({
-    where: { id },
+  const tournament = await prisma.tournament.findFirst({
+    where: { id, isPublic: true },
     include: {
       organization: { select: { name: true } },
       teams: {

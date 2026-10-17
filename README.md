@@ -4,19 +4,22 @@ SportEvent is a tournament management SaaS for local cricket organizers. The app
 
 ## Current product status
 
-This is a working MVP ready for a staging or closed-release preview. It is not yet publicly deployed.
+Management requires a verified mobile number. OTP delivery is handled by Twilio Verify, and authenticated users can only access organizations where they are members. Tournament results stay private unless an organizer publishes them.
 
 ### Included features
 
-- Organizer authentication and session management
-- Organization creation and member-scoped access
+- E.164 mobile sign-in with six-digit SMS verification codes
+- HTTP-only, database-backed sessions
+- Server-side organization membership checks for management pages and APIs
+- Persistent rate limits for OTP send and verify requests
+- Organization creation for the signed-in user
+- Private tournament pages by default with organizer-controlled publishing
 - Tournament management
 - Team and player management
 - Match scheduling and status tracking
 - Innings creation and score-event recording
 - Final match result calculation
 - Public tournament standings and results page
-- Protected dashboard routes with organization-level access checks
 
 ## Stack
 
@@ -30,7 +33,12 @@ This is a working MVP ready for a staging or closed-release preview. It is not y
 
 ```bash
 npm install
-cp .env.example .env.local
+```
+
+Copy `.env.example` to `.env.local` and configure PostgreSQL plus Twilio Verify credentials, then run:
+
+```bash
+npm run prisma:generate
 npm run dev
 ```
 
@@ -49,8 +57,6 @@ npm run ci:check
 ## Key app routes
 
 - `/` — landing page
-- `/signup` — account creation
-- `/login` — sign in
 - `/dashboard` — organizations overview
 - `/dashboard/tournaments` — tournament list and standings link
 - `/dashboard/teams` — team management
@@ -59,15 +65,24 @@ npm run ci:check
 - `/dashboard/scoring` — live innings and delivery scoring
 - `/tournaments/[id]` — public tournament standings and results page
 
-## Production readiness before public launch
+## Access and privacy
+
+Management routes and APIs require a verified mobile sign-in. Organization data is scoped to membership on the server. Public tournament pages return only tournaments explicitly published by an organization member.
+
+Configure Twilio Verify for SMS with six-digit codes. There is no fixed development OTP or bypass. Without valid provider settings, verification fails closed.
+
+## Before public deployment
 
 Before making the product public, confirm:
 
 - production environment variables are set separately from local values
 - DATABASE_URL points to a managed PostgreSQL instance
-- NEXTAUTH_SECRET and app URL are production-safe
+- Twilio Verify is configured in the hosting provider with a six-digit code and appropriate geography, rate, and spending limits
+- `NEXT_PUBLIC_APP_URL` is the HTTPS production origin
+- HTTPS session cookies are enabled
+- unauthenticated API access and cross-organization access are rejected
+- unpublished tournaments are not publicly accessible
 - CI passes in GitHub Actions
-- admin and organizer access rules are tested
 - backups and rollback steps are documented
 - the public tournament page is reviewed for privacy and correctness
 - the Vercel project is configured with the same variables as the production environment
@@ -78,9 +93,10 @@ Environment values are placeholders in `.env.example`. Do not commit local crede
 
 This repository includes a Vercel config at `vercel.json`. For a production deploy, configure the following environment variables in Vercel:
 
-- `DATABASE_URL`
-- `NEXTAUTH_SECRET`
-- `NEXTAUTH_URL`
-- `NEXT_PUBLIC_APP_URL`
+- `DATABASE_URL` (managed production PostgreSQL)
+- `NEXT_PUBLIC_APP_URL` (HTTPS production origin)
+- `TWILIO_ACCOUNT_SID`
+- `TWILIO_AUTH_TOKEN`
+- `TWILIO_VERIFY_SERVICE_SID`
 
-Use a production PostgreSQL connection string and a strong random value for `NEXTAUTH_SECRET`.
+Set production secrets only in the hosting provider. Do not deploy until real provider credentials and the production database are configured and verified.
