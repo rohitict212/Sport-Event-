@@ -25,7 +25,7 @@ describe("static demo middleware", () => {
     expect(response.headers.get("x-middleware-rewrite")).toBe("https://sportevent.example/demo-disabled");
   });
 
-  it.each(["/", "/login", "/demo-disabled"])("leaves %s available in static demo mode", (path) => {
+  it.each(["/", "/login", "/demo", "/demo-disabled"])("leaves %s available in static demo mode", (path) => {
     vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "static");
 
     const response = middleware(new NextRequest(`https://sportevent.example${path}`));

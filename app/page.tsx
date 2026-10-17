@@ -21,9 +21,17 @@ export default function HomePage() {
 
         <div className="mt-8 flex flex-wrap gap-4">
           {isStaticDemo ? (
-            <p className="text-sm leading-6 text-slate-600">
-              This preview is read-only. Sign-in, SMS verification, and organizer tools are disabled.
-            </p>
+            <>
+              <Link
+                href="/demo"
+                className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500"
+              >
+                Try the interactive demo
+              </Link>
+              <p className="self-center text-sm leading-6 text-slate-600">
+                Explore with sample data. Changes stay in this browser.
+              </p>
+            </>
           ) : (
             <Link
               href="/login"
