@@ -18,7 +18,15 @@ export function middleware(request: NextRequest) {
     );
   }
 
-  return addHsts(NextResponse.rewrite(new URL("/demo-disabled", request.url)));
+  if (
+    request.nextUrl.pathname === "/dashboard" ||
+    request.nextUrl.pathname.startsWith("/dashboard/") ||
+    request.nextUrl.pathname.startsWith("/tournaments/")
+  ) {
+    return addHsts(NextResponse.rewrite(new URL("/demo-disabled", request.url)));
+  }
+
+  return addHsts(NextResponse.next());
 }
 
 export const config = {

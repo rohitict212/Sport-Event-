@@ -25,6 +25,14 @@ describe("static demo middleware", () => {
     expect(response.headers.get("x-middleware-rewrite")).toBe("https://sportevent.example/demo-disabled");
   });
 
+  it.each(["/", "/login", "/demo-disabled"])("leaves %s available in static demo mode", (path) => {
+    vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "static");
+
+    const response = middleware(new NextRequest(`https://sportevent.example${path}`));
+
+    expect(response.headers.get("x-middleware-next")).toBe("1");
+  });
+
   it("does not change routes outside static demo mode", () => {
     vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "");
 
