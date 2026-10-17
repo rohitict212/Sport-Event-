@@ -149,11 +149,24 @@ export default function DemoWorkspace() {
   const [ready, setReady] = useState(false);
   const [storageError, setStorageError] = useState("");
   const [teamName, setTeamName] = useState("");
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
+  const [editingTeamName, setEditingTeamName] = useState("");
   const [playerName, setPlayerName] = useState("");
   const [playerTeamId, setPlayerTeamId] = useState("");
+  const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
+  const [editingPlayerName, setEditingPlayerName] = useState("");
+  const [editingPlayerTeamId, setEditingPlayerTeamId] = useState("");
   const [homeTeamId, setHomeTeamId] = useState("");
   const [awayTeamId, setAwayTeamId] = useState("");
   const [matchDate, setMatchDate] = useState(localDate(2));
+  const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
+  const [editingHomeTeamId, setEditingHomeTeamId] = useState("");
+  const [editingAwayTeamId, setEditingAwayTeamId] = useState("");
+  const [editingMatchDate, setEditingMatchDate] = useState("");
+  const [editingHomeRuns, setEditingHomeRuns] = useState("");
+  const [editingAwayRuns, setEditingAwayRuns] = useState("");
+  const [editingHomeWickets, setEditingHomeWickets] = useState("");
+  const [editingAwayWickets, setEditingAwayWickets] = useState("");
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
@@ -241,6 +254,23 @@ export default function DemoWorkspace() {
     setNotice(`${name} added to this sample tournament.`);
   }
 
+  function saveTeam(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = editingTeamName.trim();
+    if (!editingTeamId || !name || data.teams.some(
+      (team) => team.id !== editingTeamId && team.name.toLowerCase() === name.toLowerCase(),
+    )) {
+      setNotice("Enter a team name that is not already in this demo.");
+      return;
+    }
+    setData((current) => ({
+      ...current,
+      teams: current.teams.map((team) => team.id === editingTeamId ? { ...team, name } : team),
+    }));
+    setEditingTeamId(null);
+    setNotice(`Team name updated to ${name}.`);
+  }
+
   function addPlayer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const name = playerName.trim();
@@ -254,6 +284,23 @@ export default function DemoWorkspace() {
     }));
     setPlayerName("");
     setNotice(`${name} added to the sample squad.`);
+  }
+
+  function savePlayer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = editingPlayerName.trim();
+    if (!editingPlayerId || !name || !data.teams.some((team) => team.id === editingPlayerTeamId)) {
+      setNotice("Enter a player name and choose a team.");
+      return;
+    }
+    setData((current) => ({
+      ...current,
+      players: current.players.map((player) => player.id === editingPlayerId
+        ? { ...player, name, teamId: editingPlayerTeamId }
+        : player),
+    }));
+    setEditingPlayerId(null);
+    setNotice(`${name}'s sample profile was updated.`);
   }
 
   function addMatch(event: FormEvent<HTMLFormElement>) {
@@ -275,6 +322,67 @@ export default function DemoWorkspace() {
     };
     setData((current) => ({ ...current, matches: [...current.matches, match] }));
     setNotice("Match added to the sample schedule.");
+  }
+
+  function beginMatchEdit(match: Match) {
+    setEditingMatchId(match.id);
+    setEditingHomeTeamId(match.homeTeamId);
+    setEditingAwayTeamId(match.awayTeamId);
+    setEditingMatchDate(match.date);
+    setEditingHomeRuns(String(match.homeRuns));
+    setEditingAwayRuns(String(match.awayRuns));
+    setEditingHomeWickets(String(match.homeWickets));
+    setEditingAwayWickets(String(match.awayWickets));
+  }
+
+  function saveMatch(event: FormEvent<HTMLFormElement>, match: Match) {
+    event.preventDefault();
+    if (match.status === "upcoming") {
+      if (
+        !editingHomeTeamId ||
+        !editingAwayTeamId ||
+        editingHomeTeamId === editingAwayTeamId ||
+        !data.teams.some((team) => team.id === editingHomeTeamId) ||
+        !data.teams.some((team) => team.id === editingAwayTeamId) ||
+        !editingMatchDate
+      ) {
+        setNotice("Choose two different teams and a match date.");
+        return;
+      }
+      updateMatch(match.id, (current) => ({
+        ...current,
+        homeTeamId: editingHomeTeamId,
+        awayTeamId: editingAwayTeamId,
+        date: editingMatchDate,
+      }));
+      setNotice("Fixture updated.");
+    } else {
+      const homeRuns = Number(editingHomeRuns);
+      const awayRuns = Number(editingAwayRuns);
+      const homeWickets = Number(editingHomeWickets);
+      const awayWickets = Number(editingAwayWickets);
+      if (
+        ![homeRuns, awayRuns, homeWickets, awayWickets].every(Number.isInteger) ||
+        homeRuns < 0 ||
+        awayRuns < 0 ||
+        homeWickets < 0 ||
+        homeWickets > 10 ||
+        awayWickets < 0 ||
+        awayWickets > 10
+      ) {
+        setNotice("Enter valid scores and wicket totals from 0 to 10.");
+        return;
+      }
+      updateMatch(match.id, (current) => ({
+        ...current,
+        homeRuns,
+        awayRuns,
+        homeWickets,
+        awayWickets,
+      }));
+      setNotice("Match score corrected; standings were recalculated.");
+    }
+    setEditingMatchId(null);
   }
 
   function startMatch(matchId: string) {
@@ -322,6 +430,9 @@ export default function DemoWorkspace() {
 
   function resetDemo() {
     setData(createSampleData());
+    setEditingTeamId(null);
+    setEditingPlayerId(null);
+    setEditingMatchId(null);
     setNotice("Sample tournament restored. Your local demo changes were cleared.");
     setActiveTab("overview");
   }
@@ -437,10 +548,43 @@ export default function DemoWorkspace() {
             {data.teams.map((team) => (
               <article key={team.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Riverside Cricket Cup</p>
-                <h2 className="mt-2 text-xl font-bold text-slate-900">{team.name}</h2>
-                <p className="mt-2 text-sm text-slate-600">
-                  {data.players.filter((player) => player.teamId === team.id).length} players
-                </p>
+                {editingTeamId === team.id ? (
+                  <form onSubmit={saveTeam} className="mt-3">
+                    <label className="block text-sm font-medium text-slate-700">
+                      Team name
+                      <input
+                        required
+                        minLength={2}
+                        maxLength={60}
+                        autoFocus
+                        value={editingTeamName}
+                        onChange={(event) => setEditingTeamName(event.target.value)}
+                        className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5"
+                      />
+                    </label>
+                    <div className="mt-3 flex gap-2">
+                      <button className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white">Save</button>
+                      <button type="button" onClick={() => setEditingTeamId(null)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700">Cancel</button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <h2 className="mt-2 text-xl font-bold text-slate-900">{team.name}</h2>
+                    <p className="mt-2 text-sm text-slate-600">
+                      {data.players.filter((player) => player.teamId === team.id).length} players
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingTeamId(team.id);
+                        setEditingTeamName(team.name);
+                      }}
+                      className="mt-3 text-sm font-semibold text-emerald-700 hover:underline"
+                    >
+                      Edit team
+                    </button>
+                  </>
+                )}
               </article>
             ))}
           </div>
@@ -471,9 +615,55 @@ export default function DemoWorkspace() {
               <span>Player</span><span>Team</span>
             </div>
             {data.players.map((player) => (
-              <div key={player.id} className="grid grid-cols-[1fr_1fr] gap-3 border-b border-slate-100 px-5 py-3 text-sm last:border-0">
-                <span className="font-medium text-slate-800">{player.name}</span>
-                <span className="text-slate-600">{teamNameById.get(player.teamId) ?? "Unknown team"}</span>
+              <div key={player.id} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-3 border-b border-slate-100 px-5 py-3 text-sm last:border-0">
+                {editingPlayerId === player.id ? (
+                  <form
+                    className="col-span-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto]"
+                    onSubmit={savePlayer}
+                  >
+                    <label className="block text-xs font-medium text-slate-600">
+                      Player name
+                      <input
+                        required
+                        minLength={2}
+                        maxLength={80}
+                        autoFocus
+                        value={editingPlayerName}
+                        onChange={(event) => setEditingPlayerName(event.target.value)}
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-2 text-sm"
+                      />
+                    </label>
+                    <label className="block text-xs font-medium text-slate-600">
+                      Team
+                      <select
+                        required
+                        value={editingPlayerTeamId}
+                        onChange={(event) => setEditingPlayerTeamId(event.target.value)}
+                        className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm"
+                      >
+                        {data.teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
+                      </select>
+                    </label>
+                    <button className="self-end rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white">Save</button>
+                    <button type="button" onClick={() => setEditingPlayerId(null)} className="self-end rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700">Cancel</button>
+                  </form>
+                ) : (
+                  <>
+                    <span className="font-medium text-slate-800">{player.name}</span>
+                    <span className="text-slate-600">{teamNameById.get(player.teamId) ?? "Unknown team"}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingPlayerId(player.id);
+                        setEditingPlayerName(player.name);
+                        setEditingPlayerTeamId(player.teamId);
+                      }}
+                      className="text-xs font-semibold text-emerald-700 hover:underline"
+                    >
+                      Edit
+                    </button>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -515,31 +705,104 @@ export default function DemoWorkspace() {
             {data.matches.length === 0 ? <p className="rounded-2xl bg-white p-5 text-slate-600">No fixtures yet.</p> : null}
             {data.matches.map((match) => (
               <article key={match.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div>
-                  <p className="text-sm text-slate-500">{formatDate(match.date)} · {match.status}</p>
-                  <h2 className="mt-1 font-bold text-slate-900">
-                    {teamNameById.get(match.homeTeamId)} vs {teamNameById.get(match.awayTeamId)}
-                  </h2>
-                  {match.status !== "upcoming" ? (
-                    <p className="mt-1 text-sm text-slate-600">
-                      {match.homeRuns}/{match.homeWickets} · {match.awayRuns}/{match.awayWickets}
-                    </p>
-                  ) : null}
-                </div>
-                {match.status === "upcoming" ? (
-                  <button
-                    type="button"
-                    onClick={() => startMatch(match.id)}
-                    className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-600"
-                  >
-                    Start match
-                  </button>
-                ) : null}
-                {match.status === "live" ? (
-                  <button type="button" onClick={() => setActiveTab("scoring")} className="font-semibold text-emerald-700">
-                    Continue scoring →
-                  </button>
-                ) : null}
+                {editingMatchId === match.id ? (
+                  <form onSubmit={(event) => saveMatch(event, match)} className="w-full">
+                    {match.status === "upcoming" ? (
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <label className="text-sm font-medium text-slate-700">
+                          Home team
+                          <select required value={editingHomeTeamId} onChange={(event) => setEditingHomeTeamId(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2">
+                            {data.teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
+                          </select>
+                        </label>
+                        <label className="text-sm font-medium text-slate-700">
+                          Away team
+                          <select required value={editingAwayTeamId} onChange={(event) => setEditingAwayTeamId(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2">
+                            {data.teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
+                          </select>
+                        </label>
+                        <label className="text-sm font-medium text-slate-700">
+                          Date
+                          <input required type="date" value={editingMatchDate} onChange={(event) => setEditingMatchDate(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+                        </label>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="mb-3 font-semibold text-slate-900">Correct the sample score</p>
+                        <div className="grid gap-3 sm:grid-cols-4">
+                          <label className="text-sm font-medium text-slate-700">
+                            {teamNameById.get(match.homeTeamId)} runs
+                            <input required type="number" min="0" max="999" value={editingHomeRuns} onChange={(event) => setEditingHomeRuns(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+                          </label>
+                          <label className="text-sm font-medium text-slate-700">
+                            {teamNameById.get(match.homeTeamId)} wickets
+                            <input required type="number" min="0" max="10" value={editingHomeWickets} onChange={(event) => setEditingHomeWickets(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+                          </label>
+                          <label className="text-sm font-medium text-slate-700">
+                            {teamNameById.get(match.awayTeamId)} runs
+                            <input required type="number" min="0" max="999" value={editingAwayRuns} onChange={(event) => setEditingAwayRuns(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+                          </label>
+                          <label className="text-sm font-medium text-slate-700">
+                            {teamNameById.get(match.awayTeamId)} wickets
+                            <input required type="number" min="0" max="10" value={editingAwayWickets} onChange={(event) => setEditingAwayWickets(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                    <div className="mt-3 flex gap-2">
+                      <button className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white">Save changes</button>
+                      <button type="button" onClick={() => setEditingMatchId(null)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700">Cancel</button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-sm text-slate-500">{formatDate(match.date)} · {match.status}</p>
+                      <h2 className="mt-1 font-bold text-slate-900">
+                        {teamNameById.get(match.homeTeamId)} vs {teamNameById.get(match.awayTeamId)}
+                      </h2>
+                      {match.status !== "upcoming" ? (
+                        <p className="mt-1 text-sm text-slate-600">
+                          {match.homeRuns}/{match.homeWickets} · {match.awayRuns}/{match.awayWickets}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      {match.status === "upcoming" ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => beginMatchEdit(match)}
+                            className="font-semibold text-emerald-700 hover:underline"
+                          >
+                            Edit fixture
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => startMatch(match.id)}
+                            className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-600"
+                          >
+                            Start match
+                          </button>
+                        </>
+                      ) : null}
+                      {match.status === "completed" ? (
+                        <button
+                          type="button"
+                          onClick={() => beginMatchEdit(match)}
+                          className="font-semibold text-emerald-700 hover:underline"
+                        >
+                          Edit score
+                        </button>
+                      ) : null}
+                      {match.status === "live" ? (
+                        <button type="button" onClick={() => setActiveTab("scoring")} className="font-semibold text-emerald-700">
+                          Continue scoring →
+                        </button>
+                      ) : null}
+                    </div>
+                  </>
+                )}
               </article>
             ))}
           </div>
