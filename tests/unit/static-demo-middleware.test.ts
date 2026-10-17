@@ -32,4 +32,13 @@ describe("static demo middleware", () => {
 
     expect(response.headers.get("x-middleware-next")).toBe("1");
   });
+
+  it("adds HSTS to production HTTPS responses", () => {
+    vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "");
+    vi.stubEnv("NODE_ENV", "production");
+
+    const response = middleware(new NextRequest("https://sportevent.example/"));
+
+    expect(response.headers.get("strict-transport-security")).toBe("max-age=63072000");
+  });
 });
