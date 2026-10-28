@@ -29,6 +29,8 @@ type Match = {
   awayWickets: number;
   homeBalls: number;
   awayBalls: number;
+  homeProgress: number[];
+  awayProgress: number[];
 };
 type TournamentWorkspace = {
   tournament: Tournament;
@@ -54,6 +56,25 @@ type Standing = {
 
 const STORAGE_KEY = "sportevent-interactive-demo-v1";
 const DEFAULT_MATCH_DATE = "2026-10-19";
+function sampleWormProgress(runs: number, phase: number) {
+  const progress = [0];
+  for (let over = 1; over <= 20; over += 1) {
+    const fraction = over / 20;
+    const curve = Math.pow(fraction, 0.88) + 0.035 * Math.sin((fraction * 3 + phase) * Math.PI) * Math.sin(Math.PI * fraction);
+    progress.push(Math.max(progress[progress.length - 1], Math.round(runs * curve)));
+  }
+  progress[progress.length - 1] = runs;
+  return progress;
+}
+
+function scaleProgress(progress: number[], finalRuns: number) {
+  const oldFinal = progress[progress.length - 1] ?? 0;
+  if (oldFinal === 0) return progress.map((_, index) => index === progress.length - 1 ? finalRuns : 0);
+  return progress.map((runs, index) =>
+    index === progress.length - 1 ? finalRuns : Math.min(finalRuns, Math.round(runs * finalRuns / oldFinal)),
+  );
+}
+
 const emptyPlayerStats = {
   runs: 0,
   ballsFaced: 0,
@@ -104,6 +125,8 @@ function createSampleData(): DemoData {
         awayWickets: 10,
         homeBalls: 120,
         awayBalls: 120,
+        homeProgress: sampleWormProgress(148, 0.15),
+        awayProgress: sampleWormProgress(132, 0.62),
       },
       {
         id: "match-2",
@@ -117,6 +140,8 @@ function createSampleData(): DemoData {
         awayWickets: 7,
         homeBalls: 120,
         awayBalls: 120,
+        homeProgress: sampleWormProgress(121, 0.38),
+        awayProgress: sampleWormProgress(121, 0.82),
       },
       {
         id: "match-3",
@@ -130,6 +155,8 @@ function createSampleData(): DemoData {
         awayWickets: 0,
         homeBalls: 0,
         awayBalls: 0,
+        homeProgress: [0],
+        awayProgress: [0],
       },
     ],
     activeMatchId: null,
@@ -165,7 +192,9 @@ function parseWorkspace(value: unknown, fallback: TournamentWorkspace): Tourname
         typeof match?.homeRuns === "number" &&
         typeof match?.awayRuns === "number" &&
         typeof match?.homeWickets === "number" &&
-        typeof match?.awayWickets === "number",
+        typeof match?.awayWickets === "number" &&
+        (match?.homeProgress === undefined || Array.isArray(match.homeProgress)) &&
+        (match?.awayProgress === undefined || Array.isArray(match.awayProgress)),
     );
   if (!isValid) return null;
   const sample = createSampleData();
@@ -202,6 +231,12 @@ function parseWorkspace(value: unknown, fallback: TournamentWorkspace): Tourname
       ...match,
       homeBalls: typeof match.homeBalls === "number" ? match.homeBalls : match.status === "completed" ? 120 : 0,
       awayBalls: typeof match.awayBalls === "number" ? match.awayBalls : match.status === "completed" ? 120 : 0,
+      homeProgress: Array.isArray(match.homeProgress)
+        ? match.homeProgress
+        : [0, Number(match.homeRuns)],
+      awayProgress: Array.isArray(match.awayProgress)
+        ? match.awayProgress
+        : [0, Number(match.awayRuns)],
     } as Match)),
     activeMatchId: typeof data.activeMatchId === "string" ? data.activeMatchId : null,
     battingTeamId: typeof data.battingTeamId === "string" ? data.battingTeamId : null,
@@ -302,6 +337,8 @@ export default function DemoWorkspace() {
   const [editingAwayRuns, setEditingAwayRuns] = useState("");
   const [editingHomeWickets, setEditingHomeWickets] = useState("");
   const [editingAwayWickets, setEditingAwayWickets] = useState("");
+  const [selectedWormMatchId, setSelectedWormMatchId] = useState("match-1");
+  const [selectedPlayerStatsId, setSelectedPlayerStatsId] = useState("player-1");
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
@@ -382,6 +419,16 @@ export default function DemoWorkspace() {
   const topBatters = [...data.players].sort((a, b) => b.runs - a.runs);
   const topBowlers = [...data.players].sort((a, b) => b.wickets - a.wickets || a.runsConceded - b.runsConceded);
   const completedMatches = data.matches.filter((match) => match.status === "completed");
+  const wormMatches = data.matches.filter((match) => match.status !== "upcoming");
+  const selectedWormMatch = wormMatches.find((match) => match.id === selectedWormMatchId) ?? wormMatches[0];
+  const selectedPlayerStats = data.players.find((player) => player.id === selectedPlayerStatsId) ?? data.players[0];
+  const wormMaxRuns = selectedWormMatch
+    ? Math.max(selectedWormMatch.homeRuns, selectedWormMatch.awayRuns, 1)
+    : 1;
+  const wormPoints = (progress: number[]) =>
+    progress.map((runs, index) =>
+      `${48 + (index / Math.max(1, data.tournament.overs)) * 560},${202 - (runs / wormMaxRuns) * 168}`,
+    ).join(" ");
   const tournamentRunRate = completedMatches.length
     ? completedMatches.reduce((total, match) =>
       total + match.homeRuns + match.awayRuns, 0) /
@@ -462,6 +509,61 @@ export default function DemoWorkspace() {
     setNotice(`Switched to ${selected.tournament.name}.`);
   }
 
+  function deleteTournament() {
+    if (data.otherTournaments.length === 0) {
+      setNotice("Keep at least one tournament in the demo. Add another before deleting this one.");
+      return;
+    }
+    if (!window.confirm(`Delete "${data.tournament.name}" and all its local demo data?`)) return;
+    const [next, ...remaining] = data.otherTournaments;
+    setData({ ...next, otherTournaments: remaining });
+    setTournamentForm(next.tournament);
+    setEditingTournament(false);
+    setIsCreatingTournament(false);
+    setNotice("Tournament and its local demo data deleted.");
+  }
+
+  function deletePlayer(playerId: string) {
+    const player = data.players.find(({ id }) => id === playerId);
+    if (!player || !window.confirm(`Delete ${player.name} and their sample statistics?`)) return;
+    setData((current) => ({
+      ...current,
+      players: current.players.filter(({ id }) => id !== playerId),
+      strikerId: current.strikerId === playerId ? null : current.strikerId,
+      nonStrikerId: current.nonStrikerId === playerId ? null : current.nonStrikerId,
+      bowlerId: current.bowlerId === playerId ? null : current.bowlerId,
+    }));
+    if (selectedPlayerStatsId === playerId) setSelectedPlayerStatsId("");
+    setNotice(`${player.name} and their individual sample statistics were deleted.`);
+  }
+
+  function deleteMatch(matchId: string) {
+    const match = data.matches.find(({ id }) => id === matchId);
+    if (!match || !window.confirm(`Delete the fixture ${teamNameById.get(match.homeTeamId)} vs ${teamNameById.get(match.awayTeamId)}?`)) return;
+    setData((current) => ({
+      ...current,
+      matches: current.matches.filter(({ id }) => id !== matchId),
+      activeMatchId: current.activeMatchId === matchId ? null : current.activeMatchId,
+      battingTeamId: current.activeMatchId === matchId ? null : current.battingTeamId,
+      strikerId: current.activeMatchId === matchId ? null : current.strikerId,
+      nonStrikerId: current.activeMatchId === matchId ? null : current.nonStrikerId,
+      bowlerId: current.activeMatchId === matchId ? null : current.bowlerId,
+    }));
+    setNotice("Fixture and its scorecard were deleted.");
+  }
+
+  function clearPlayerStats(playerId: string) {
+    const player = data.players.find(({ id }) => id === playerId);
+    if (!player || !window.confirm(`Clear all sample statistics for ${player.name}?`)) return;
+    setData((current) => ({
+      ...current,
+      players: current.players.map((entry) =>
+        entry.id === playerId ? { ...entry, ...emptyPlayerStats } : entry,
+      ),
+    }));
+    setNotice(`${player.name}'s individual statistics were cleared.`);
+  }
+
   function saveTeam(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const name = editingTeamName.trim();
@@ -529,6 +631,8 @@ export default function DemoWorkspace() {
       awayWickets: 0,
       homeBalls: 0,
       awayBalls: 0,
+      homeProgress: [0],
+      awayProgress: [0],
     };
     setData((current) => ({ ...current, matches: [...current.matches, match] }));
     setNotice("Match added to the sample schedule.");
@@ -589,6 +693,8 @@ export default function DemoWorkspace() {
         awayRuns,
         homeWickets,
         awayWickets,
+        homeProgress: scaleProgress(current.homeProgress, homeRuns),
+        awayProgress: scaleProgress(current.awayProgress, awayRuns),
       }));
       setNotice("Match score corrected; standings were recalculated.");
     }
@@ -668,15 +774,28 @@ export default function DemoWorkspace() {
         }
         return player;
       }),
-      matches: current.matches.map((match) => match.id !== activeMatch.id ? match : ({
-        ...match,
-        homeRuns: match.homeRuns + (homeBatting ? runs : 0),
-        awayRuns: match.awayRuns + (homeBatting ? 0 : runs),
-        homeWickets: match.homeWickets + (homeBatting && wicket && match.homeWickets < 10 ? 1 : 0),
-        awayWickets: match.awayWickets + (!homeBatting && wicket && match.awayWickets < 10 ? 1 : 0),
-        homeBalls: match.homeBalls + (homeBatting ? 1 : 0),
-        awayBalls: match.awayBalls + (homeBatting ? 0 : 1),
-      })),
+      matches: current.matches.map((match) => {
+        if (match.id !== activeMatch.id) return match;
+        const homeRuns = match.homeRuns + (homeBatting ? runs : 0);
+        const awayRuns = match.awayRuns + (homeBatting ? 0 : runs);
+        const homeBalls = match.homeBalls + (homeBatting ? 1 : 0);
+        const awayBalls = match.awayBalls + (homeBatting ? 0 : 1);
+        const homeProgress = [...match.homeProgress];
+        const awayProgress = [...match.awayProgress];
+        if (homeBatting) homeProgress[Math.ceil(homeBalls / 6)] = homeRuns;
+        else awayProgress[Math.ceil(awayBalls / 6)] = awayRuns;
+        return {
+          ...match,
+          homeRuns,
+          awayRuns,
+          homeWickets: match.homeWickets + (homeBatting && wicket && match.homeWickets < 10 ? 1 : 0),
+          awayWickets: match.awayWickets + (!homeBatting && wicket && match.awayWickets < 10 ? 1 : 0),
+          homeBalls,
+          awayBalls,
+          homeProgress,
+          awayProgress,
+        };
+      }),
       strikerId: runs % 2 === 1 ? current.nonStrikerId : current.strikerId,
       nonStrikerId: runs % 2 === 1 ? current.strikerId : current.nonStrikerId,
     }));
@@ -764,7 +883,7 @@ export default function DemoWorkspace() {
           <path d="m157 177 12-90 12 90m-19-34h14m-44 34 12-90 12 90m-19-34h14" stroke="#f0fdfa" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
         <div className="relative z-10 max-w-2xl">
-          <p className="text-sm font-bold uppercase tracking-[0.22em] text-cyan-200">Floodlights on · Season 2026</p>
+          <p className="text-sm font-bold uppercase tracking-[0.22em] text-cyan-200">Floodlights on · Cricket tournament hub</p>
           <h1 className="mt-3 max-w-[34rem] text-3xl font-black tracking-tight text-white sm:text-4xl xl:text-5xl">{data.tournament.name}</h1>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
@@ -785,6 +904,15 @@ export default function DemoWorkspace() {
             >
               + New tournament
             </button>
+            {data.otherTournaments.length > 0 ? (
+              <button
+                type="button"
+                onClick={deleteTournament}
+                className="rounded-full border border-rose-300/30 bg-rose-400/10 px-3 py-1.5 text-xs font-bold text-rose-100 hover:bg-rose-400/20"
+              >
+                Delete tournament
+              </button>
+            ) : null}
           </div>
           <p className="mt-3 max-w-xl text-sm leading-6 text-slate-200 sm:text-base">
             {data.tournament.description || "A night of big hits, tight spells, and local cricket."}
@@ -792,7 +920,7 @@ export default function DemoWorkspace() {
           <div className="mt-5 flex flex-wrap gap-2 text-xs font-semibold text-cyan-50">
             <span className="rounded-full border border-cyan-100/20 bg-cyan-100/10 px-3 py-1.5">{data.tournament.overs} overs</span>
             <span className="rounded-full border border-cyan-100/20 bg-cyan-100/10 px-3 py-1.5">{data.tournament.venue}</span>
-            <span className="rounded-full border border-amber-100/20 bg-amber-100/10 px-3 py-1.5">Fictional demo season</span>
+            <span className="rounded-full border border-amber-100/20 bg-amber-100/10 px-3 py-1.5">Fictional demo data</span>
             {data.otherTournaments.length > 0 ? (
               <label className="flex items-center gap-2 rounded-full border border-cyan-100/20 bg-cyan-100/10 px-3 py-1">
                 Tournament
@@ -968,6 +1096,54 @@ export default function DemoWorkspace() {
               </div>
             </section>
           </div>
+          <section className="demo-panel rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-xl sm:p-6">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-fuchsia-300">Over-by-over worm</p>
+                <h2 className="mt-1 text-xl font-black text-white">Cumulative runs comparison</h2>
+              </div>
+              {wormMatches.length > 0 ? (
+                <label className="text-xs font-semibold text-slate-300">
+                  Match
+                  <select
+                    aria-label="Choose match for worm chart"
+                    value={selectedWormMatch?.id ?? ""}
+                    onChange={(event) => setSelectedWormMatchId(event.target.value)}
+                    className="demo-input ml-2 rounded-lg border px-3 py-2 text-sm"
+                  >
+                    {wormMatches.map((match) => (
+                      <option key={match.id} value={match.id}>
+                        {teamNameById.get(match.homeTeamId)} vs {teamNameById.get(match.awayTeamId)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+            </div>
+            {selectedWormMatch ? (
+              <>
+                <div className="mt-4 flex flex-wrap gap-4 text-xs font-semibold text-slate-200">
+                  <span><i className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-cyan-300" />{teamNameById.get(selectedWormMatch.homeTeamId)} · {selectedWormMatch.homeRuns}/{selectedWormMatch.homeWickets}</span>
+                  <span><i className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-fuchsia-400" />{teamNameById.get(selectedWormMatch.awayTeamId)} · {selectedWormMatch.awayRuns}/{selectedWormMatch.awayWickets}</span>
+                </div>
+                <svg className="mt-3 h-64 w-full" viewBox="0 0 640 230" role="img" aria-label={`Cumulative runs by over: ${teamNameById.get(selectedWormMatch.homeTeamId)} in cyan and ${teamNameById.get(selectedWormMatch.awayTeamId)} in magenta`}>
+                  {[0, 1, 2, 3, 4].map((line) => (
+                    <g key={line}>
+                      <line x1="48" x2="608" y1={202 - line * 42} y2={202 - line * 42} stroke="#334155" strokeDasharray="4 6" />
+                      <text x="8" y={206 - line * 42} fill="#94a3b8" fontSize="11">{Math.round(wormMaxRuns * line / 4)}</text>
+                    </g>
+                  ))}
+                  <line x1="48" x2="608" y1="202" y2="202" stroke="#64748b" />
+                  <line x1="48" x2="48" y1="34" y2="202" stroke="#64748b" />
+                  <text x="48" y="221" fill="#94a3b8" fontSize="11">0 overs</text>
+                  <text x="565" y="221" fill="#94a3b8" fontSize="11">{data.tournament.overs} overs</text>
+                  <polyline points={wormPoints(selectedWormMatch.homeProgress)} fill="none" stroke="#67e8f9" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+                  <polyline points={wormPoints(selectedWormMatch.awayProgress)} fill="none" stroke="#e879f9" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+                </svg>
+                <p className="mt-1 text-xs text-slate-400">Lines show cumulative runs at the end of each over. Sample curves are illustrative; live scoring updates the current innings after each delivery.</p>
+              </>
+            ) : <p className="mt-4 text-sm text-slate-300">Start or complete a match to compare cumulative runs.</p>}
+          </section>
         </section>
       ) : null}
 
@@ -1090,6 +1266,13 @@ export default function DemoWorkspace() {
                       className="text-xs font-semibold text-emerald-700 hover:underline"
                     >
                       Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deletePlayer(player.id)}
+                      className="text-xs font-semibold text-rose-700 hover:underline"
+                    >
+                      Delete player & stats
                     </button>
                   </>
                 )}
@@ -1229,6 +1412,13 @@ export default function DemoWorkspace() {
                           Continue scoring →
                         </button>
                       ) : null}
+                      <button
+                        type="button"
+                        onClick={() => deleteMatch(match.id)}
+                        className="font-semibold text-rose-700 hover:underline"
+                      >
+                        Delete fixture
+                      </button>
                     </div>
                   </>
                 )}
@@ -1470,6 +1660,62 @@ export default function DemoWorkspace() {
               </table>
             </div>
             <p className="mt-3 text-xs leading-5 text-slate-500">Player leaderboards use fictional sample figures plus deliveries recorded during this browser session. Score corrections to completed matches update team standings, not individual scorecards.</p>
+          </section>
+          <section className="demo-panel rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-xl">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">Player cards</p>
+                <h2 className="mt-1 text-xl font-black text-white">Individual player statistics</h2>
+              </div>
+              {data.players.length > 0 ? (
+                <label className="text-sm font-semibold text-slate-300">
+                  Select player
+                  <select
+                    aria-label="Choose player for individual statistics"
+                    value={selectedPlayerStats?.id ?? ""}
+                    onChange={(event) => setSelectedPlayerStatsId(event.target.value)}
+                    className="demo-input ml-2 rounded-lg border px-3 py-2"
+                  >
+                    {data.players.map((player) => <option key={player.id} value={player.id}>{player.name}</option>)}
+                  </select>
+                </label>
+              ) : null}
+            </div>
+            {selectedPlayerStats ? (
+              <div className="mt-5 rounded-2xl border border-slate-700 bg-slate-950/60 p-5">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-fuchsia-300">{teamNameById.get(selectedPlayerStats.teamId) ?? "Unassigned team"}</p>
+                    <h3 className="mt-1 text-2xl font-black text-white">{selectedPlayerStats.name}</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => clearPlayerStats(selectedPlayerStats.id)}
+                    className="rounded-lg border border-rose-300/30 bg-rose-400/10 px-3 py-2 text-xs font-bold text-rose-100 hover:bg-rose-400/20"
+                  >
+                    Clear this player&apos;s stats
+                  </button>
+                </div>
+                <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {[
+                    ["Runs", selectedPlayerStats.runs],
+                    ["Batting average", selectedPlayerStats.dismissals ? (selectedPlayerStats.runs / selectedPlayerStats.dismissals).toFixed(1) : "—"],
+                    ["Strike rate", selectedPlayerStats.ballsFaced ? (selectedPlayerStats.runs / selectedPlayerStats.ballsFaced * 100).toFixed(1) : "—"],
+                    ["Balls faced", selectedPlayerStats.ballsFaced],
+                    ["4s / 6s", `${selectedPlayerStats.fours} / ${selectedPlayerStats.sixes}`],
+                    ["Wickets", selectedPlayerStats.wickets],
+                    ["Bowling economy", selectedPlayerStats.ballsBowled ? (selectedPlayerStats.runsConceded / (selectedPlayerStats.ballsBowled / 6)).toFixed(2) : "—"],
+                    ["Bowling average", selectedPlayerStats.wickets ? (selectedPlayerStats.runsConceded / selectedPlayerStats.wickets).toFixed(1) : "—"],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-xl border border-slate-800 bg-slate-900 p-3">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+                      <p className="mt-1 text-lg font-black text-white">{value}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-4 text-xs leading-5 text-slate-400">Clearing removes this player&apos;s recorded batting and bowling figures only. It does not delete the player or tournament.</p>
+              </div>
+            ) : <p className="mt-4 text-sm text-slate-300">No players available. Add a player to build a personal stat card.</p>}
           </section>
         </section>
       ) : null}

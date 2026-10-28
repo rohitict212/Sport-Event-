@@ -108,8 +108,10 @@ To deploy a non-commercial, browser-only preview on the Vercel Hobby plan, set
 landing page and an interactive sample workspace at `/demo`. The workspace uses
 fictional tournaments, each with its own teams, players, matches, batting and
 bowling scorecards, statistics, and standings stored only in the visitor's browser.
-It supports creating and editing tournaments and sample data, and displays charts,
-run rates, batting averages, strike rates, and bowling economy. Login, SMS, real organizer dashboards, tournament
+It supports creating, editing, and deleting tournaments, fixtures, and player records;
+individual player statistics can also be cleared separately. Analytics include
+over-by-over cumulative-run comparison charts, personal player cards, run rates,
+batting averages, strike rates, and bowling economy. Login, SMS, real organizer dashboards, tournament
 pages, and all API routes remain disabled. It does not require database or Twilio
 credentials and must not be used to serve commercial customers or handle real
 personal or tournament data. Remove the variable only when the production database,
