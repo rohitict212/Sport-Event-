@@ -42,7 +42,7 @@ npm run prisma:generate
 npm run dev
 ```
 
-The app can be viewed at http://https://sport-event-one.vercel.app/.
+The app can be viewed at https://sport-event-one.vercel.app.
 
 ## Quality checks
 
