@@ -42,7 +42,7 @@ npm run prisma:generate
 npm run dev
 ```
 
-The app can be viewed at http://localhost:3000.
+The app can be viewed at http://localhost:3033.
 
 ## Quality checks
 
